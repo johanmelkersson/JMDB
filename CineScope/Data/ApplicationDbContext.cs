@@ -12,5 +12,7 @@ namespace CineScope.Data
         }
 
         public DbSet<Movie> Movies { get; set; }
+        public DbSet<Review> Reviews { get; set; }
+        public DbSet<FavoriteMovie> FavoriteMovies { get; set; }
     }
 }
