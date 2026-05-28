@@ -1,8 +1,80 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model IEnumerable<CineScope.Models.Movie>
+
+@{
+    ViewData["Title"] = "Home";
+    var genres = Model.Select(m => m.Genre).Distinct().OrderBy(g => g).ToList();
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@section FullWidth {
+    <div class="hero-banner">
+        <div class="container hero-content">
+            <h1 class="hero-title">Discover <span>Great Films</span></h1>
+            <p class="hero-subtitle">Browse, rate, and review movies. Your personal cinema starts here.</p>
+            <a asp-controller="Movies" asp-action="Create" class="btn btn-danger btn-lg me-2">+ Add Movie</a>
+            <a asp-controller="Movies" asp-action="Index" class="btn btn-outline-light btn-lg">Browse All</a>
+        </div>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="no-movies-msg">
+        <p style="font-size:1.1rem;">No movies yet. <a asp-controller="Movies" asp-action="Create" class="text-accent">Add the first one!</a></p>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+        <span class="section-title me-3">Browse</span>
+        <button class="filter-btn active" data-genre="all">All</button>
+        @foreach (var genre in genres)
+        {
+            <button class="filter-btn" data-genre="@genre">@genre</button>
+        }
+    </div>
+
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3" id="movieGrid">
+        @foreach (var movie in Model)
+        {
+            <div class="col movie-item" data-genre="@movie.Genre">
+                <a asp-controller="Movies" asp-action="Details" asp-route-id="@movie.Id" class="text-decoration-none">
+                    <div class="movie-card">
+                        @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                        {
+                            <img src="@movie.PosterUrl" alt="@movie.Title" class="movie-poster" />
+                        }
+                        else
+                        {
+                            <div class="movie-poster-placeholder">
+                                <span>@movie.Title</span>
+                            </div>
+                        }
+                        <div class="movie-card-body">
+                            <div class="movie-card-title" title="@movie.Title">@movie.Title</div>
+                            <div class="movie-card-meta">
+                                <span>@movie.Genre &middot; @movie.ReleaseYear</span>
+                                <span class="rating-badge">@movie.Rating</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const genre = btn.dataset.genre;
+                document.querySelectorAll('.movie-item').forEach(item => {
+                    item.style.display = (genre === 'all' || item.dataset.genre === genre) ? '' : 'none';
+                });
+            });
+        });
+    </script>
+}

@@ -1,14 +1,24 @@
+using CineScope.Data;
 using CineScope.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace CineScope.Controllers
 {
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        private readonly ApplicationDbContext _context;
+
+        public HomeController(ApplicationDbContext context)
         {
-            return View();
+            _context = context;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var movies = await _context.Movies.ToListAsync();
+            return View(movies);
         }
 
         public IActionResult Privacy()
