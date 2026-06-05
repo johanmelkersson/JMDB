@@ -6,9 +6,12 @@
 
 <h1>Movies</h1>
 
-<p>
-    <a asp-action="Create" class="btn btn-primary">Add New Movie</a>
-</p>
+@if (User.IsInRole("Admin"))
+{
+    <p>
+        <a asp-action="Create" class="btn btn-danger">+ Add Movie</a>
+    </p>
+}
 
 <form asp-action="Index" method="get" class="mb-3">
     <div class="input-group" style="max-width: 400px;">
@@ -44,8 +47,11 @@
                 <td>@movie.Duration</td>
                 <td>
                     <a asp-action="Details" asp-route-id="@movie.Id" class="btn btn-sm btn-info">Details</a>
-                    <a asp-action="Edit" asp-route-id="@movie.Id" class="btn btn-sm btn-warning">Edit</a>
-                    <a asp-action="Delete" asp-route-id="@movie.Id" class="btn btn-sm btn-danger">Delete</a>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-action="Edit" asp-route-id="@movie.Id" class="btn btn-sm btn-warning">Edit</a>
+                        <a asp-action="Delete" asp-route-id="@movie.Id" class="btn btn-sm btn-danger">Delete</a>
+                    }
                 </td>
             </tr>
         }

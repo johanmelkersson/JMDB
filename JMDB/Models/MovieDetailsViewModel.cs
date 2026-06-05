@@ -7,6 +7,7 @@ namespace JMDB.Models
         public double AverageRating { get; set; }
         public bool IsFavorite { get; set; }
         public bool UserHasReviewed { get; set; }
+        public string? CurrentUserId { get; set; }
 
         // Form fields for new review
         public string NewReviewContent { get; set; } = string.Empty;

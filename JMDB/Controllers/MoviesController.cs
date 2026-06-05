@@ -1,8 +1,10 @@
 using JMDB.Data;
+using JMDB.Hubs;
 using JMDB.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace JMDB.Controllers
@@ -11,11 +13,13 @@ namespace JMDB.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IHubContext<ReviewHub> _hubContext;
 
-        public MoviesController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public MoviesController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IHubContext<ReviewHub> hubContext)
         {
             _context = context;
             _userManager = userManager;
+            _hubContext = hubContext;
         }
 
         // GET: Movies
@@ -57,7 +61,8 @@ namespace JMDB.Controllers
                 Reviews = reviews,
                 AverageRating = averageRating,
                 IsFavorite = isFavorite,
-                UserHasReviewed = userHasReviewed
+                UserHasReviewed = userHasReviewed,
+                CurrentUserId = userId
             };
 
             return View(viewModel);
@@ -75,15 +80,54 @@ namespace JMDB.Controllers
             var alreadyReviewed = await _context.Reviews.AnyAsync(r => r.MovieId == movieId && r.UserId == userId);
             if (!alreadyReviewed)
             {
-                _context.Reviews.Add(new Review
+                var review = new Review
                 {
                     MovieId = movieId,
                     UserId = userId,
                     Content = content,
                     Rating = Math.Clamp(rating, 1, 10)
-                });
+                };
+                _context.Reviews.Add(review);
                 await _context.SaveChangesAsync();
+
+                var user = await _userManager.FindByIdAsync(userId);
+                await _hubContext.Clients.Group($"movie-{movieId}").SendAsync("NewReview", new
+                {
+                    reviewId = review.Id,
+                    userName = user?.UserName ?? "Unknown",
+                    content = review.Content,
+                    rating = review.Rating,
+                    createdAt = review.CreatedAt.ToString("MMM d, yyyy")
+                });
             }
+
+            return RedirectToAction(nameof(Details), new { id = movieId });
+        }
+
+        // POST: Movies/DeleteReview
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize]
+        public async Task<IActionResult> DeleteReview(int reviewId, int movieId)
+        {
+            var review = await _context.Reviews.FindAsync(reviewId);
+            if (review == null) return NotFound();
+
+            var userId = _userManager.GetUserId(User);
+            var isAdmin = User.IsInRole("Admin");
+
+            if (review.UserId != userId && !isAdmin)
+                return Forbid();
+
+            var reviewOwner = await _userManager.FindByIdAsync(review.UserId);
+            _context.Reviews.Remove(review);
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.Group($"movie-{movieId}").SendAsync("ReviewDeleted", new
+            {
+                reviewId,
+                userName = reviewOwner?.UserName ?? ""
+            });
 
             return RedirectToAction(nameof(Details), new { id = movieId });
         }

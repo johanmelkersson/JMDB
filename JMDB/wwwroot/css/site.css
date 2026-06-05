@@ -80,6 +80,12 @@ body > .container {
     color: var(--text-primary) !important;
 }
 
+.navbar-cinescope .nav-link.active-nav {
+    color: var(--text-primary) !important;
+    font-weight: 600;
+    border-bottom: 2px solid var(--accent);
+}
+
 .navbar-toggler-icon {
     filter: invert(1);
 }

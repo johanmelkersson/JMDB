@@ -1,0 +1,87 @@
+@model IEnumerable<JMDB.Models.TmdbMovieResult>
+
+@{
+    ViewData["Title"] = "Discover Movies";
+    var mode = ViewData["Mode"]?.ToString();
+    var query = ViewData["Query"]?.ToString();
+    var importedIds = ViewData["ImportedIds"] as HashSet<int> ?? new HashSet<int>();
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 mt-3">
+    <h2 class="section-title mb-0">
+        @(mode == "Trending" ? "Trending This Week" : $"Results for \"{query}\"")
+    </h2>
+    <span style="color: var(--text-muted); font-size:0.85rem;">via TMDB</span>
+</div>
+
+<form asp-action="Search" method="get" class="mb-4">
+    <div class="input-group" style="max-width: 500px;">
+        <input type="text" name="query" value="@query"
+               class="form-control" placeholder="Search TMDB..." />
+        <button type="submit" class="btn btn-danger">Search</button>
+        @if (!string.IsNullOrEmpty(query))
+        {
+            <a asp-action="Search" class="btn btn-outline-secondary">Trending</a>
+        }
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <p style="color: var(--text-muted);">No results found.</p>
+}
+else
+{
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+        @foreach (var movie in Model)
+        {
+            var isImported = importedIds.Contains(movie.Id);
+
+            <div class="col">
+                <div class="movie-card h-100 d-flex flex-column">
+                    @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                    {
+                        <img src="@movie.PosterUrl" alt="@movie.Title" class="movie-poster" />
+                    }
+                    else
+                    {
+                        <div class="movie-poster-placeholder">
+                            <span>@movie.Title</span>
+                        </div>
+                    }
+
+                    <div class="movie-card-body d-flex flex-column flex-grow-1">
+                        <div class="movie-card-title" title="@movie.Title">@movie.Title</div>
+                        <div class="movie-card-meta mb-2">
+                            <span>@movie.ReleaseYear</span>
+                            <span class="rating-badge">@movie.VoteAverage.ToString("0.0")</span>
+                        </div>
+
+                        @if (isAdmin)
+                        {
+                            if (isImported)
+                            {
+                                <form asp-action="Remove" method="post" class="mt-auto">
+                                    <input type="hidden" name="tmdbId" value="@movie.Id" />
+                                    <button type="submit" class="btn btn-sm btn-success w-100">✓ Imported</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="Import" method="post" class="mt-auto">
+                                    <input type="hidden" name="tmdbId" value="@movie.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">+ Import</button>
+                                </form>
+                            }
+                        }
+                        else if (isImported)
+                        {
+                            <span class="btn btn-sm btn-success w-100 mt-auto" style="pointer-events:none;">✓ In library</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

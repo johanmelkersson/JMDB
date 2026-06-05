@@ -1,5 +1,7 @@
 using JMDB.Data;
+using JMDB.Hubs;
 using JMDB.Models;
+using JMDB.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +25,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/Login";
 });
 
+builder.Services.AddHttpClient<TmdbService>();
+builder.Services.AddSingleton<JMDB.Services.UserTracker>();
+builder.Services.AddSignalR();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
@@ -46,6 +51,8 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapHub<ReviewHub>("/hubs/review");
+
 // Seed roles and admin user
 using (var scope = app.Services.CreateScope())
 {
@@ -58,7 +65,7 @@ using (var scope = app.Services.CreateScope())
             await roleManager.CreateAsync(new IdentityRole(role));
     }
 
-    const string adminEmail = "admin@cinescope.com";
+    const string adminEmail = "admin@jmdb.com";
     const string adminPassword = "Admin123!";
 
     if (await userManager.FindByEmailAsync(adminEmail) == null)

@@ -1,0 +1,45 @@
+@model IEnumerable<JMDB.Models.Movie>
+
+@{
+    ViewData["Title"] = "My Favorites";
+}
+
+<h2 class="section-title mt-3">My Favorites</h2>
+
+@if (!Model.Any())
+{
+    <div class="no-movies-msg">
+        <p style="font-size:1.1rem;">No favorites yet. <a asp-controller="Movies" asp-action="Index" class="text-accent">Browse movies</a> and click ☆ Favorite!</p>
+    </div>
+}
+else
+{
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+        @foreach (var movie in Model)
+        {
+            <div class="col">
+                <a asp-controller="Movies" asp-action="Details" asp-route-id="@movie.Id" class="text-decoration-none">
+                    <div class="movie-card">
+                        @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                        {
+                            <img src="@movie.PosterUrl" alt="@movie.Title" class="movie-poster" />
+                        }
+                        else
+                        {
+                            <div class="movie-poster-placeholder">
+                                <span>@movie.Title</span>
+                            </div>
+                        }
+                        <div class="movie-card-body">
+                            <div class="movie-card-title" title="@movie.Title">@movie.Title</div>
+                            <div class="movie-card-meta">
+                                <span>@movie.Genre &middot; @movie.ReleaseYear</span>
+                                <span class="rating-badge">@movie.Rating</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}

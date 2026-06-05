@@ -1,0 +1,170 @@
+@model JMDB.Models.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex align-items-center justify-content-between mt-3 mb-0">
+    <h2 class="section-title mb-0">Admin Dashboard</h2>
+    <a asp-action="Users" class="btn btn-sm btn-outline-secondary">Manage Users →</a>
+</div>
+
+<div class="row g-3 mb-5">
+    <div class="col-6 col-md-3">
+        <div class="crud-container text-center">
+            <div style="font-size:2rem; font-weight:800; color:var(--accent);">@Model.TotalMovies</div>
+            <div style="color:var(--text-secondary);">Movies</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="crud-container text-center">
+            <div style="font-size:2rem; font-weight:800; color:var(--accent);">@Model.TotalUsers</div>
+            <div style="color:var(--text-secondary);">Users</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="crud-container text-center">
+            <div style="font-size:2rem; font-weight:800; color:var(--accent);">@Model.TotalReviews</div>
+            <div style="color:var(--text-secondary);">Reviews</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="crud-container text-center">
+            <div style="font-size:2rem; font-weight:800; color:var(--accent);">@Model.TotalFavorites</div>
+            <div style="color:var(--text-secondary);">Favorites</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <h5 class="section-title">Top Rated</h5>
+        @if (!Model.TopRatedMovies.Any())
+        {
+            <p style="color:var(--text-muted);">No reviews yet.</p>
+        }
+        else
+        {
+            <div class="crud-container p-0" style="overflow:hidden;">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Movie</th>
+                            <th class="text-center">Avg</th>
+                            <th class="text-center">Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.TopRatedMovies)
+                        {
+                            <tr>
+                                <td><a asp-controller="Movies" asp-action="Details" asp-route-id="@row.Id" style="color:var(--text-primary);">@row.Title</a></td>
+                                <td class="text-center"><span class="rating-badge">@row.AverageRating.ToString("0.0")</span></td>
+                                <td class="text-center" style="color:var(--text-secondary);">@row.ReviewCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="col-md-6">
+        <h5 class="section-title">Most Reviewed</h5>
+        @if (!Model.MostReviewedMovies.Any())
+        {
+            <p style="color:var(--text-muted);">No reviews yet.</p>
+        }
+        else
+        {
+            <div class="crud-container p-0" style="overflow:hidden;">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Movie</th>
+                            <th class="text-center">Reviews</th>
+                            <th class="text-center">Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.MostReviewedMovies)
+                        {
+                            <tr>
+                                <td><a asp-controller="Movies" asp-action="Details" asp-route-id="@row.Id" style="color:var(--text-primary);">@row.Title</a></td>
+                                <td class="text-center" style="color:var(--text-secondary);">@row.ReviewCount</td>
+                                <td class="text-center"><span class="rating-badge">@row.AverageRating.ToString("0.0")</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <h5 class="section-title">Most Active Users</h5>
+        @if (!Model.MostActiveUsers.Any())
+        {
+            <p style="color:var(--text-muted);">No activity yet.</p>
+        }
+        else
+        {
+            <div class="crud-container p-0" style="overflow:hidden;">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th class="text-center">Reviews</th>
+                            <th class="text-center">Favorites</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model.MostActiveUsers)
+                        {
+                            <tr>
+                                <td style="color:var(--text-primary);">@user.UserName</td>
+                                <td class="text-center" style="color:var(--text-secondary);">@user.ReviewCount</td>
+                                <td class="text-center" style="color:var(--text-secondary);">@user.FavoriteCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="col-md-6">
+        <h5 class="section-title">Recently Imported</h5>
+        @if (!Model.RecentlyImported.Any())
+        {
+            <p style="color:var(--text-muted);">No TMDB imports yet.</p>
+        }
+        else
+        {
+            <div class="row row-cols-3 g-2">
+                @foreach (var movie in Model.RecentlyImported)
+                {
+                    <div class="col">
+                        <a asp-controller="Movies" asp-action="Details" asp-route-id="@movie.Id" class="text-decoration-none">
+                            <div class="movie-card">
+                                @if (!string.IsNullOrEmpty(movie.PosterUrl))
+                                {
+                                    <img src="@movie.PosterUrl" alt="@movie.Title" class="movie-poster" />
+                                }
+                                else
+                                {
+                                    <div class="movie-poster-placeholder"><span>@movie.Title</span></div>
+                                }
+                                <div class="movie-card-body">
+                                    <div class="movie-card-title">@movie.Title</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

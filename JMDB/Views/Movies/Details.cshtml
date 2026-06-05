@@ -58,15 +58,17 @@
 
 <div class="row">
     <div class="col-md-8">
-        <h4 class="section-title">Reviews (@Model.Reviews.Count)</h4>
+        <h4 class="section-title" id="review-heading">Reviews (@Model.Reviews.Count)</h4>
 
-        @if (User.Identity?.IsAuthenticated == true && !Model.UserHasReviewed)
+        @if (User.Identity?.IsAuthenticated == true)
         {
-            <div class="crud-container mb-4">
+            <p id="already-reviewed-msg" class="mb-4" style="color: var(--text-muted); @(!Model.UserHasReviewed ? "display:none;" : "")">
+                You have already reviewed this movie.
+            </p>
+            <div class="crud-container mb-4" id="review-form" style="@(Model.UserHasReviewed ? "display:none;" : "")">
                 <h6 class="mb-3">Write a review</h6>
                 <form asp-action="AddReview" method="post">
                     <input type="hidden" name="movieId" value="@Model.Movie.Id" />
-
                     <div class="mb-3">
                         <label class="form-label">Rating (1–10)</label>
                         <input type="number" name="rating" min="1" max="10" value="7" class="form-control" style="width:100px;" />
@@ -79,10 +81,6 @@
                 </form>
             </div>
         }
-        else if (User.Identity?.IsAuthenticated == true && Model.UserHasReviewed)
-        {
-            <p style="color: var(--text-muted);" class="mb-4">You have already reviewed this movie.</p>
-        }
         else
         {
             <p style="color: var(--text-muted);" class="mb-4">
@@ -90,25 +88,117 @@
             </p>
         }
 
-        @if (!Model.Reviews.Any())
-        {
-            <p style="color: var(--text-muted);">No reviews yet — be the first!</p>
-        }
-        else
-        {
-            @foreach (var review in Model.Reviews)
+        <div id="review-list">
+            @if (!Model.Reviews.Any())
             {
-                <div class="crud-container mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>@review.User?.UserName</strong>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rating-badge">@review.Rating / 10</span>
-                            <span style="color: var(--text-muted); font-size:0.8rem;">@review.CreatedAt.ToString("MMM d, yyyy")</span>
-                        </div>
-                    </div>
-                    <p class="mb-0" style="color: var(--text-secondary);">@review.Content</p>
-                </div>
+                <p id="no-reviews-msg" style="color: var(--text-muted);">No reviews yet — be the first!</p>
             }
-        }
+            else
+            {
+                @foreach (var review in Model.Reviews)
+                {
+                    <div class="crud-container mb-3" data-review-id="@review.Id">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong>@review.User?.UserName</strong>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rating-badge">@review.Rating / 10</span>
+                                <span style="color: var(--text-muted); font-size:0.8rem;">@review.CreatedAt.ToString("MMM d, yyyy")</span>
+                                @if (review.UserId == Model.CurrentUserId || User.IsInRole("Admin"))
+                                {
+                                    <form asp-action="DeleteReview" method="post" class="d-inline">
+                                        <input type="hidden" name="reviewId" value="@review.Id" />
+                                        <input type="hidden" name="movieId" value="@Model.Movie.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                onclick="return confirm('Delete this review?')">✕</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                        <p class="mb-0" style="color: var(--text-secondary);">@review.Content</p>
+                    </div>
+                }
+            }
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        const movieId = "@Model.Movie.Id";
+        const currentUser = "@User.Identity?.Name";
+        const isAdmin = @User.IsInRole("Admin").ToString().ToLower();
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "";
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/review")
+            .withAutomaticReconnect()
+            .build();
+
+        function getReviewCount() {
+            return document.querySelectorAll("#review-list [data-review-id]").length;
+        }
+
+        function updateHeading(count) {
+            const h = document.getElementById("review-heading");
+            if (h) h.textContent = `Reviews (${count})`;
+        }
+
+        connection.on("NewReview", (review) => {
+            const noMsg = document.getElementById("no-reviews-msg");
+            if (noMsg) noMsg.remove();
+
+            const canDelete = (review.userName === currentUser || isAdmin);
+            const deleteBtn = canDelete ? `
+                <form action="/Movies/DeleteReview" method="post" class="d-inline">
+                    <input type="hidden" name="reviewId" value="${review.reviewId}" />
+                    <input type="hidden" name="movieId" value="${movieId}" />
+                    <input type="hidden" name="__RequestVerificationToken" value="${antiForgeryToken}" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
+                            onclick="return confirm('Delete this review?')">✕</button>
+                </form>` : "";
+
+            const html = `
+                <div class="crud-container mb-3" data-review-id="${review.reviewId}" style="border-left: 3px solid var(--accent);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>${review.userName}</strong>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rating-badge">${review.rating} / 10</span>
+                            <span style="color: var(--text-muted); font-size:0.8rem;">${review.createdAt}</span>
+                            ${deleteBtn}
+                        </div>
+                    </div>
+                    <p class="mb-0" style="color: var(--text-secondary);">${review.content}</p>
+                </div>`;
+
+            document.getElementById("review-list").insertAdjacentHTML("afterbegin", html);
+            updateHeading(getReviewCount());
+
+            if (review.userName === currentUser) {
+                document.getElementById("review-form").style.display = "none";
+                document.getElementById("already-reviewed-msg").style.display = "";
+            }
+        });
+
+        connection.on("ReviewDeleted", (data) => {
+            const card = document.querySelector(`[data-review-id="${data.reviewId}"]`);
+            if (card) card.remove();
+
+            updateHeading(getReviewCount());
+
+            if (getReviewCount() === 0) {
+                document.getElementById("review-list").innerHTML =
+                    '<p id="no-reviews-msg" style="color: var(--text-muted);">No reviews yet — be the first!</p>';
+            }
+
+            if (data.userName === currentUser) {
+                document.getElementById("already-reviewed-msg").style.display = "none";
+                document.getElementById("review-form").style.display = "";
+            }
+        });
+
+        connection.start()
+            .then(() => connection.invoke("JoinMovieGroup", movieId))
+            .catch(err => console.error("SignalR error:", err));
+    </script>
+}
